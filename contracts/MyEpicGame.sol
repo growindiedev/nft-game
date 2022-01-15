@@ -23,16 +23,39 @@ contract MyEpicGame is ERC721 {
 
   CharacterAttributes[] defaultCharacters;
   mapping(uint256 => CharacterAttributes) public nftHolderAttributes;
+
+  struct BigBoss {
+    string name;
+    string imageURI;
+    uint hp;
+    uint maxHp;
+    uint attackDamage;
+  }
+
+  BigBoss public bigBoss;
   mapping(address => uint256) public nftHolders;
 
   constructor(
     string[] memory characterNames,
     string[] memory characterImageURIs,
     uint[] memory characterHp,
-    uint[] memory characterAttackDmg
+    uint[] memory characterAttackDmg,
+    string memory bossName,
+    string memory bossImageURI,
+    uint bossHp,
+    uint bossAttackDamage
+
   )
     ERC721("Heroes", "HERO")
   {
+    bigBoss = BigBoss({
+      name: bossName,
+      imageURI: bossImageURI,
+      hp: bossHp,
+      maxHp: bossHp,
+      attackDamage: bossAttackDamage
+    });
+
     for(uint i; i < characterNames.length; i += 1){
       defaultCharacters.push(
         CharacterAttributes({
@@ -68,6 +91,41 @@ contract MyEpicGame is ERC721 {
     _tokenIds.increment();
   }
 
+  function attackBoss() public {
+    //get the state of player's NFT
+    uint nftTokenIdOfPlayer = nftHolders[msg.sender];
+    CharacterAttributes storage player = nftHolderAttributes[nftTokenIdOfPlayer];
+    console.log("\nPlayer w/ character %s about to attack. Has %s HP and %s AD", player.name, player.hp, player.attackDamage);
+    console.log("Boss %s has %s HP and %s AD", bigBoss.name, bigBoss.hp, bigBoss.attackDamage);
+
+    require (
+      player.hp > 0,
+      "Error: character must have HP to attack boss."
+    );
+
+    require (
+      bigBoss.hp > 0,
+      "Error: boss must have HP to attack boss."
+    );
+    
+    // Allow player to attack boss.
+    if (bigBoss.hp < player.attackDamage) {
+      bigBoss.hp = 0;
+    } else {
+      bigBoss.hp = bigBoss.hp - player.attackDamage;
+    }
+
+    // Allow boss to attack player.
+    if (player.hp < bigBoss.attackDamage) {
+      player.hp = 0;
+    } else {
+      player.hp = player.hp - bigBoss.attackDamage;
+    }
+
+    console.log("Player attacked boss. New boss hp: %s", bigBoss.hp);
+    console.log("Boss attacked player. New player hp: %s\n", player.hp);
+  }
+
   function tokenURI(uint256 _tokenId) public view override returns (string memory) {
   CharacterAttributes memory charAttributes = nftHolderAttributes[_tokenId];
 
@@ -93,5 +151,5 @@ contract MyEpicGame is ERC721 {
   );
   
   return output;
-}
+  }
 }
